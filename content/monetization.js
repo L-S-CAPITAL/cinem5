@@ -31,9 +31,33 @@ export function grantPack(sku) {
   localStorage.setItem(ENTITLEMENTS_KEY, JSON.stringify([...set]));
 }
 
+/** Bundle SKUs grant multiple packs */
+const BUNDLE_GRANTS = {
+  "bundle-all": true, // special: everything
+  "bundle-starter": [
+    "pack-neon-rain",
+    "pack-golden-portrait",
+    "pack-jazz-bar",
+  ],
+  "bundle-intimate": ["pack-boudoir", "pack-erotic-bw", "pack-raw-flash"],
+};
+
 export function hasPack(sku) {
   if (!sku) return true;
-  return getEntitlements().has(sku) || getEntitlements().has("bundle-all");
+  const ent = getEntitlements();
+  if (ent.has(sku) || ent.has("bundle-all")) return true;
+  // Owned bundle grants this pack?
+  for (const [bundle, packs] of Object.entries(BUNDLE_GRANTS)) {
+    if (packs === true) continue;
+    if (ent.has(bundle) && packs.includes(sku)) return true;
+  }
+  return false;
+}
+
+export function grantBundle(sku) {
+  grantPack(sku);
+  const packs = BUNDLE_GRANTS[sku];
+  if (Array.isArray(packs)) packs.forEach(grantPack);
 }
 
 /** Apply ?unlocked=pack-sku or ?unlocked=pack-a,pack-b from checkout return */

@@ -4,21 +4,36 @@
  */
 import { SHOT_URIS } from "../shots/embeds.js";
 
-/** Checkout URLs — replace with Lemon Squeezy / Gumroad product links */
-export const CHECKOUT = {
-  "pack-neon-rain": "#checkout-pack-neon-rain",
-  "pack-golden-portrait": "#checkout-pack-golden-portrait",
-  "pack-macro-dew": "#checkout-pack-macro-dew",
-  "pack-jazz-bar": "#checkout-pack-jazz-bar",
-  "pack-action-freeze": "#checkout-pack-action-freeze",
-  "pack-blue-hour": "#checkout-pack-blue-hour",
-  "pack-boudoir": "#checkout-pack-boudoir",
-  "pack-erotic-bw": "#checkout-pack-erotic-bw",
-  "pack-raw-flash": "#checkout-pack-raw-flash",
-  "bundle-starter": "#checkout-bundle-starter",
-  "bundle-intimate": "#checkout-bundle-intimate",
-  "bundle-all": "#checkout-bundle-all",
-};
+/**
+ * Checkout URLs
+ * Set FRAMEDECK_CHECKOUT_MODE in content/checkout-config.js:
+ *   - "demo"  → in-app unlock confirm (local)
+ *   - "gumroad" / "lemonsqueezy" → real product URLs below
+ *
+ * Replace each URL with your product link. Success URL should return to:
+ *   https://YOUR_DOMAIN/?unlocked=pack-sku
+ */
+import { resolveCheckout } from "./checkout-config.js";
+
+export const CHECKOUT_SKUS = [
+  "pack-neon-rain",
+  "pack-golden-portrait",
+  "pack-macro-dew",
+  "pack-jazz-bar",
+  "pack-action-freeze",
+  "pack-blue-hour",
+  "pack-boudoir",
+  "pack-erotic-bw",
+  "pack-raw-flash",
+  "bundle-starter",
+  "bundle-intimate",
+  "bundle-all",
+];
+
+/** @type {Record<string, string>} */
+export const CHECKOUT = Object.fromEntries(
+  CHECKOUT_SKUS.map((sku) => [sku, resolveCheckout(sku)])
+);
 
 export const BUNDLES = [
   {
@@ -76,8 +91,13 @@ export const SHOTS = [
     nsfw: false,
     access: "paid",
     price: 15,
-    albumReady: false,
-    album: null,
+    albumReady: true,
+    album: {
+      folder: "neon-rain",
+      count: 10,
+      title: "Neon rain album · 10 frames",
+      note: "Night street neon & rain references.",
+    },
   },
   {
     id: "golden-portrait",
@@ -98,8 +118,13 @@ export const SHOTS = [
     nsfw: false,
     access: "free",
     price: 0,
-    albumReady: false,
-    album: null,
+    albumReady: true,
+    album: {
+      folder: "golden-portrait",
+      count: 10,
+      title: "Golden hour album · 10 frames",
+      note: "Portrait light & rim studies.",
+    },
   },
   {
     id: "macro-dew",
@@ -120,8 +145,13 @@ export const SHOTS = [
     nsfw: false,
     access: "paid",
     price: 12,
-    albumReady: false,
-    album: null,
+    albumReady: true,
+    album: {
+      folder: "macro-dew",
+      count: 10,
+      title: "Macro dew album · 10 frames",
+      note: "Close-focus detail references.",
+    },
   },
   {
     id: "jazz-bar",
@@ -142,8 +172,13 @@ export const SHOTS = [
     nsfw: false,
     access: "paid",
     price: 15,
-    albumReady: false,
-    album: null,
+    albumReady: true,
+    album: {
+      folder: "jazz-bar",
+      count: 10,
+      title: "Jazz bar album · 10 frames",
+      note: "Tungsten interior mood boards.",
+    },
   },
   {
     id: "action-freeze",
@@ -164,8 +199,13 @@ export const SHOTS = [
     nsfw: false,
     access: "paid",
     price: 12,
-    albumReady: false,
-    album: null,
+    albumReady: true,
+    album: {
+      folder: "action-freeze",
+      count: 10,
+      title: "Action freeze album · 10 frames",
+      note: "Shutter-priority freeze frames.",
+    },
   },
   {
     id: "blue-hour-land",
@@ -186,8 +226,13 @@ export const SHOTS = [
     nsfw: false,
     access: "free",
     price: 0,
-    albumReady: false,
-    album: null,
+    albumReady: true,
+    album: {
+      folder: "blue-hour",
+      count: 10,
+      title: "Blue hour album · 10 frames",
+      note: "Deep-focus landscape studies.",
+    },
   },
   {
     id: "boudoir-soft",

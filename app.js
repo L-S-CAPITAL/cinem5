@@ -216,9 +216,10 @@ function renderShots() {
       if (href.startsWith("#checkout-")) {
         e.preventDefault();
         const sku = a.dataset.sku;
-        if (sku && confirm(`Demo unlock “${sku}”? (Replace #checkout links with Lemon Squeezy / Gumroad.)`)) {
+        if (sku && confirm(`Demo unlock “${sku}”? (Set checkout-config.js to external + real URLs for live sales.)`)) {
           import("./content/monetization.js").then((m) => {
-            m.grantPack(sku);
+            if (sku.startsWith("bundle-")) m.grantBundle(sku);
+            else m.grantPack(sku);
             renderShots();
           });
         }
