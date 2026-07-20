@@ -6,6 +6,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { SHOTS, BUNDLES } from "./content/catalog.js";
+import { assetUrl } from "./content/assets.js";
 import {
   applyUnlockQuery,
   checkoutUrl,
@@ -20,33 +21,49 @@ const deckScroll = document.getElementById("deck-scroll");
 const bodyEl = document.body;
 
 function albumPaths(folder, count) {
-  // Prefer local .jpg; fall back to .jpg.b64 (text-safe for git hosts without binary push)
+  // Prefer local .jpg; fall back to .jpg.b64; on Vercel, assetUrl may point at GitHub raw
   return Array.from({ length: count }, (_, i) => {
     const base = `shots/albums/${folder}/${String(i + 1).padStart(2, "0")}`;
-    return { jpg: `${base}.jpg`, b64: `${base}.jpg.b64` };
+    return {
+      jpg: assetUrl(`${base}.jpg`),
+      b64: assetUrl(`${base}.jpg.b64`),
+      localJpg: `${base}.jpg`,
+      localB64: `${base}.jpg.b64`,
+    };
   });
 }
 
 const albumUriCache = new Map();
 
 async function resolveAlbumUri(entry) {
-  const key = entry.jpg;
+  const key = entry.localJpg || entry.jpg;
   if (albumUriCache.has(key)) return albumUriCache.get(key);
-  // Try binary jpg first (local dev), then base64 sidecar (GitHub text push)
-  try {
-    const r = await fetch(entry.jpg, { method: "HEAD" });
-    if (r.ok) {
-      albumUriCache.set(key, entry.jpg);
-      return entry.jpg;
-    }
-  } catch (_) {}
-  const b64 = await fetch(entry.b64).then((r) => {
-    if (!r.ok) throw new Error(`Missing album frame ${entry.b64}`);
-    return r.text();
-  });
-  const uri = `data:image/jpeg;base64,${b64.trim()}`;
-  albumUriCache.set(key, uri);
-  return uri;
+
+  const candidates = [entry.jpg, entry.localJpg, entry.b64, entry.localB64].filter(Boolean);
+  for (const url of candidates) {
+    try {
+      if (url.endsWith(".b64") || url.includes(".jpg.b64")) {
+        const r = await fetch(url);
+        if (!r.ok) continue;
+        const b64 = (await r.text()).trim();
+        const uri = `data:image/jpeg;base64,${b64}`;
+        albumUriCache.set(key, uri);
+        return uri;
+      }
+      const head = await fetch(url, { method: "HEAD" });
+      if (head.ok) {
+        albumUriCache.set(key, url);
+        return url;
+      }
+      // Some hosts don't support HEAD — try GET range/full
+      const get = await fetch(url, { method: "GET" });
+      if (get.ok) {
+        albumUriCache.set(key, url);
+        return url;
+      }
+    } catch (_) {}
+  }
+  throw new Error(`Missing album frame ${key}`);
 }
 
 function albumMarkup(shot, unlocked) {
