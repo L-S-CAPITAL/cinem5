@@ -1,0 +1,337 @@
+/* FrameDeck pack locks, age gate, bundles */
+
+.pack-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin: 0.35rem 0 0.65rem;
+}
+
+.pack-bar .sku {
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.price-pill,
+.owned-pill,
+.nsfw-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.price-pill {
+  background: rgba(200, 16, 46, 0.18);
+  border: 1px solid rgba(200, 16, 46, 0.4);
+  color: #ff8a9a;
+}
+
+.price-pill.free {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.owned-pill {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #86efac;
+}
+
+.nsfw-pill {
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  color: var(--gold);
+}
+
+.unlock-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.65rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff !important;
+  text-decoration: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border: 1px solid var(--red);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.unlock-btn:hover {
+  box-shadow: 0 8px 28px var(--red-glow);
+  transform: translateY(-1px);
+}
+
+.unlock-btn.compact {
+  width: auto;
+  margin-top: 0;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.62rem;
+}
+
+.lock-badge {
+  position: absolute;
+  bottom: 0.55rem;
+  right: 0.55rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.shot-thumb.blurred img {
+  filter: blur(14px) brightness(0.55);
+  transform: scale(1.08);
+}
+
+.album-lock-tile {
+  aspect-ratio: 1;
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  opacity: 0.55;
+}
+
+.album-coming {
+  opacity: 0.95;
+}
+
+.age-hint {
+  color: var(--gold) !important;
+}
+
+/* Bundles */
+.bundle-strip {
+  margin-bottom: 1.15rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: linear-gradient(145deg, rgba(200, 16, 46, 0.12), rgba(18, 18, 22, 0.9));
+}
+
+.bundle-title {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.25rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.25rem;
+}
+
+.bundle-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.45;
+  margin-bottom: 0.75rem;
+}
+
+.bundle-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.bundle-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.25);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s;
+}
+
+.bundle-card:hover {
+  border-color: rgba(200, 16, 46, 0.45);
+}
+
+.bundle-card strong {
+  font-size: 0.8rem;
+}
+
+.bundle-card em {
+  grid-column: 1 / -1;
+  font-style: normal;
+  font-size: 0.68rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Age gate */
+.age-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 5, 6, 0.92);
+  backdrop-filter: blur(16px);
+  padding: 1.5rem;
+}
+
+.age-gate.hidden {
+  display: none;
+}
+
+.age-gate-card {
+  max-width: 22rem;
+  width: 100%;
+  padding: 1.75rem 1.5rem;
+  border-radius: 1.25rem;
+  border: 1px solid var(--line);
+  background: rgba(14, 14, 16, 0.98);
+  text-align: center;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+.age-gate-card h2 {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.75rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5rem;
+}
+
+.age-gate-card p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.55;
+  margin-bottom: 1.25rem;
+}
+
+.age-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.age-actions button {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 0.85rem 1rem;
+  border-radius: 999px;
+}
+
+.age-yes {
+  background: var(--red);
+  color: #fff;
+}
+
+.age-no {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line) !important;
+}
+
+/* Waitlist */
+.waitlist {
+  position: fixed;
+  left: 2.5rem;
+  bottom: 5.5rem;
+  z-index: 12;
+  max-width: 18rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  background: rgba(10, 10, 12, 0.75);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(12px);
+}
+
+.waitlist label {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.waitlist-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.waitlist input {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.78rem;
+}
+
+.waitlist button {
+  appearance: none;
+  border: none;
+  background: var(--red);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.5rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#waitlist-note {
+  margin-top: 0.45rem;
+  font-size: 0.7rem;
+  color: #86efac;
+}
+
+.legal-foot {
+  position: fixed;
+  bottom: 0.35rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  color: rgba(161, 161, 170, 0.65);
+  text-align: center;
+  max-width: 90vw;
+  pointer-events: none;
+}
+
+@media (max-width: 960px) {
+  .waitlist {
+    left: 1rem;
+    right: 1rem;
+    max-width: none;
+    bottom: 5rem;
+  }
+}
