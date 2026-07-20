@@ -1,0 +1,169 @@
+/* Photo albums + lightbox for Shot Deck */
+
+.album-block {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  display: none;
+}
+
+.shot-card.active .album-block {
+  display: block;
+}
+
+.album-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.album-head h4 {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  font-weight: 400;
+}
+
+.album-head span {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.album-note {
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: var(--muted);
+  margin-bottom: 0.55rem;
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.3rem;
+}
+
+.album-grid button {
+  appearance: none;
+  border: 1px solid transparent;
+  padding: 0;
+  margin: 0;
+  background: #111;
+  border-radius: 0.35rem;
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 1;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.album-grid button:hover,
+.album-grid button:focus-visible {
+  border-color: rgba(200, 16, 46, 0.7);
+  transform: scale(1.04);
+  outline: none;
+}
+
+.album-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Lightbox */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+}
+
+.lightbox.open {
+  display: flex;
+}
+
+.lightbox-inner {
+  position: relative;
+  max-width: min(920px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lightbox-inner img {
+  max-width: 100%;
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  background: #0a0a0b;
+}
+
+.lightbox-meta {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.lightbox-meta strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.lightbox-close,
+.lightbox-nav {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(12, 12, 14, 0.85);
+  color: #fff;
+  cursor: pointer;
+  border-radius: 999px;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.2rem;
+  line-height: 1;
+  z-index: 2;
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.1rem;
+}
+
+.lightbox-nav.prev { left: -0.5rem; }
+.lightbox-nav.next { right: -0.5rem; }
+
+.lightbox-close:hover,
+.lightbox-nav:hover {
+  background: var(--red);
+  border-color: var(--red);
+}
+
+@media (max-width: 520px) {
+  .album-grid { grid-template-columns: repeat(4, 1fr); }
+  .lightbox-nav.prev { left: 0.25rem; }
+  .lightbox-nav.next { right: 0.25rem; }
+}

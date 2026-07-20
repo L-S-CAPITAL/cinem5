@@ -29,6 +29,19 @@ Cinema + M5. Spin the body, study the glass, then open the deck for exposure rec
 | Tungsten Jazz Bar | f/2 | 2500 | 1/50 |
 | Urban Action Freeze | f/4 | 400 | 1/1600 |
 | Blue Hour Landscape | f/8 | 200 | 1/30 |
+| Boudoir Soft Light | f/2 | 800 | 1/160 | **10-frame album** |
+| Erotic Black & White | f/2.8 | 1600 | 1/125 | **10-frame album** |
+| Raw Flash Editorial (TR-style) | f/5.6 | 200 | 1/200 | **10-frame album** |
+
+### Style albums
+
+Each of the three intimate/flash cards includes a **10-photo album** under `shots/albums/`:
+
+- `boudoir/` — soft light, silk, lingerie / implied nude
+- `erotic-bw/` — monochrome chiaroscuro & form
+- `raw-flash/` — hard on-camera flash diary (TR-adjacent)
+
+These are **original generated style references**, not copyrighted Terry Richardson Diaries images. Explicit full nudes are limited by content moderation.
 
 ## Run
 

@@ -1,0 +1,788 @@
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { SHOT_URIS } from "./shots/embeds.js";
+
+// ═══════════════════════════════════════════════════════════
+// SHOT DECK DATA — cinematic recipes for M5 + 22mm f/2
+// ═══════════════════════════════════════════════════════════
+const SHOTS = [
+  {
+    id: "neon-rain",
+    title: "Neon Rain Street",
+    tag: "Night · Street",
+    img: SHOT_URIS["5"],
+    f: "f/2",
+    iso: "3200",
+    ss: "1/60",
+    modes: ["Av or M", "WB: Tungsten/Custom", "IS: On if available"],
+    blurb: "Blade Runner sidewalk energy — wet asphalt, cyan/magenta neon, lone figure under rain.",
+    explain:
+      "Wide open at <strong>f/2</strong> so neon and reflections stay bright without crushing shadows. " +
+      "<strong>1/60</strong> freezes light rain while allowing streaky droplets if you pan slightly; slower risks walk-cycle blur. " +
+      "<strong>ISO 3200</strong> is the M5’s sweet spot for night (DIGIC 7 still clean enough with mild NR). " +
+      "Expose for the neon highlights; lift shadows in post. Dual Pixel AF on the figure’s silhouette.",
+  },
+  {
+    id: "golden-portrait",
+    title: "Golden Hour Portrait",
+    tag: "Portrait · Magic Hour",
+    img: SHOT_URIS["1"],
+    f: "f/2",
+    iso: "200",
+    ss: "1/500",
+    modes: ["Av", "AF: Face+Tracking", "Meter: Spot face"],
+    blurb: "Soft rim light, creamy bokeh, intimate medium close-up — classic 35mm storytelling length.",
+    explain:
+      "At ~35mm equiv., step in close for intimacy. <strong>f/2</strong> separates subject from trees with smooth STM-rendered falloff. " +
+      "<strong>1/500</strong> kills handshake and micro-expression blur in bright sun. " +
+      "<strong>ISO 200</strong> (or 100) keeps skin buttery. Put the sun behind/side for rim light; expose for the face " +
+      "(+0.3 to +0.7 EV if backlit). Avoid f/2 if both eyes must be sharp on a 3/4 angle — stop to f/2.2–f/2.8.",
+  },
+  {
+    id: "macro-dew",
+    title: "Close Focus · Dew Macro",
+    tag: "Macro · Detail",
+    img: SHOT_URIS["4"],
+    f: "f/5.6",
+    iso: "400",
+    ss: "1/200",
+    modes: ["M or Av", "MF + focus peaking", "Timer / remote"],
+    blurb: "Push the 22mm to its 0.15 m / 0.49 ft minimum — jewel-like drops and paper-thin DOF.",
+    explain:
+      "This lens is not 1:1 macro (max 0.21×), but at <strong>0.15 m</strong> it gets dramatically close. " +
+      "At f/2, DOF is razor-thin — stop to <strong>f/5.6</strong> so a whole dew line stays sharp. " +
+      "<strong>1/200</strong> + good morning light freezes leaf sway; raise ISO to 800 if cloudy. " +
+      "Manual focus recommended; rock your body slightly to nail the plane of focus. Tripod helps.",
+  },
+  {
+    id: "jazz-bar",
+    title: "Tungsten Jazz Bar",
+    tag: "Interior · Low Light",
+    img: SHOT_URIS["2"],
+    f: "f/2",
+    iso: "2500",
+    ss: "1/50",
+    modes: ["M", "WB: 2800–3200K", "Silent continuous"],
+    blurb: "Moody practicals, smoke, whiskey-glass hero — f/2 is why you bought this pancake.",
+    explain:
+      "Dim interiors are the 22mm f/2’s home turf. Stay at <strong>f/2</strong>; stop down only if the glass and bar both need sharpness. " +
+      "<strong>1/50–1/60</strong> is the floor for handheld (rule of thumb ≈ 1/focal; 22mm is forgiving). " +
+      "<strong>ISO 1600–3200</strong> on M5 is usable; prefer underexposing ⅓ stop vs. blowing practicals. " +
+      "Focus on the nearest glass edge; let the band fall soft. Custom white balance beats Auto for tungsten+neon mix.",
+  },
+  {
+    id: "action-freeze",
+    title: "Urban Action Freeze",
+    tag: "Action · Daylight",
+    img: SHOT_URIS["6"],
+    f: "f/4",
+    iso: "400",
+    ss: "1/1600",
+    modes: ["Tv / S", "AF: Servo continuous", "Drive: High 7–9 fps"],
+    blurb: "Skate mid-air, hard sun, low angle — freeze the peak of the trick.",
+    explain:
+      "Shutter first: <strong>1/1000–1/2000</strong> freezes airborne athletes. " +
+      "Stop to <strong>f/4</strong> for enough DOF when tracking a moving subject with Dual Pixel Servo AF. " +
+      "Midday sun → <strong>ISO 200–400</strong>. Pre-focus on the landing zone or track the subject’s torso. " +
+      "22mm’s wide FOV is perfect for dynamic low angles that include environment + athlete.",
+  },
+  {
+    id: "blue-hour-land",
+    title: "Blue Hour Landscape",
+    tag: "Landscape · Deep Focus",
+    img: SHOT_URIS["3"],
+    f: "f/8",
+    iso: "200",
+    ss: "1/30",
+    modes: ["M or Av", "Tripod", "2s timer / remote"],
+    blurb: "Layered misty ridges — everything sharp from foreground grass to distant peaks.",
+    explain:
+      "Landscapes need depth: <strong>f/8</strong> (sweet spot for this prime) keeps near-to-far sharp without diffraction mush. " +
+      "Blue hour is dim — <strong>ISO 200–400</strong> and <strong>1/15–1/60</strong> on a tripod. " +
+      "Handheld? Raise ISO to 800–1600 and open to f/5.6. Focus ~⅓ into the scene (hyperfocal). " +
+      "22mm ≈ 35mm gives a natural wide that still feels human, not ultra-wide distortion.",
+  },
+  {
+    id: "boudoir-soft",
+    title: "Boudoir Soft Light",
+    tag: "Boudoir · Intimate",
+    img: SHOT_URIS["7"],
+    f: "f/2",
+    iso: "800",
+    ss: "1/160",
+    modes: ["Av or M", "AF: Face+Tracking", "WB: Cloudy / 5600–6000K"],
+    blurb: "Window light, silk sheets, cream palette — flattering, intimate, never clinical.",
+    explain:
+      "Boudoir lives on soft directional light. Place the subject near a large window; use sheer curtains as a free softbox. " +
+      "<strong>f/2</strong> melts the bedroom into cream bokeh and keeps focus on eyes/shoulder line — the 22mm’s ~35mm FOV is perfect for environmental intimacy (step in, don’t stand across the room). " +
+      "<strong>1/160–1/200</strong> freezes small movements on the bed; drop to 1/100 only if light forces it. " +
+      "<strong>ISO 400–1600</strong> indoors is normal on the M5 — prefer raising ISO over slowing the shutter. " +
+      "Expose for skin highlights (+0.3 EV if backlit). Shoot RAW; keep contrast gentle in post. Consent, warmth, and direction matter more than gear.",
+    album: {
+      folder: "boudoir",
+      count: 10,
+      title: "Boudoir album · 10 frames",
+      note: "Original style references (soft light, silk, lingerie / implied nude). Explicit full nudes blocked by generator moderation — use these as lighting & posing cues.",
+    },
+  },
+  {
+    id: "erotic-bw",
+    title: "Erotic Black & White",
+    tag: "Fine Art · Monochrome",
+    img: SHOT_URIS["8"],
+    f: "f/2.8",
+    iso: "1600",
+    ss: "1/125",
+    modes: ["M", "Picture Style: Monochrome", "Spot meter on highlight"],
+    blurb: "Chiaroscuro, film grain, high-contrast light — sensuality through shadow and form.",
+    explain:
+      "B&W erotic work is about <em>shape and light</em>, not color. Use a single hard or window side-light so shadows carve the frame (rumpled sheets, silhouette, negative space). " +
+      "Stop to <strong>f/2.8–f/4</strong> if you need more of the form sharp; stay at f/2 for abstract isolation. " +
+      "<strong>1/125</strong> is a safe handheld floor for deliberate posing. " +
+      "<strong>ISO 800–3200</strong> adds grain that reads as film — on the M5, 1600 is a sweet spot; push mono contrast in-camera or convert in post from a flat RAW. " +
+      "Meter the brightest skin/sheet edge and let blacks fall. Avoid flat overhead light. Shoot for curves, gesture, and negative space.",
+    album: {
+      folder: "erotic-bw",
+      count: 10,
+      title: "Erotic B&W album · 10 frames",
+      note: "Original monochrome references (silhouette, grain, chiaroscuro). Full explicit nudes could not be generated — study shadow, form, and contrast instead.",
+    },
+  },
+  {
+    id: "raw-flash",
+    title: "Raw Flash Editorial",
+    tag: "Flash · TR-Style",
+    img: SHOT_URIS["9"],
+    f: "f/5.6",
+    iso: "200",
+    ss: "1/200",
+    modes: ["M", "Flash: On-camera / direct", "WB: Flash / 5500K"],
+    blurb: "Harsh on-camera flash, white wall, high-key skin — raw snapshot energy (Terry Richardson–adjacent).",
+    explain:
+      "This look is intentional “anti-studio”: direct flash, pale wall, candid stare, slightly unflattering and very alive. " +
+      "Lock the shutter at <strong>1/200</strong> (M5 X-sync) so ambient goes dark-ish and the flash owns the frame. " +
+      "Stop to <strong>f/5.6–f/8</strong> for zone focus and to keep flash power in a usable range. " +
+      "<strong>ISO 100–400</strong> — keep base ISO so the flash, not noise, builds exposure. Dial flash power until skin is bright but not pure white (blinkies as a guide). " +
+      "Stand close with the 22mm (~35mm equiv.) for that confrontational snapshot feel. No bounce, no softbox — the hard shadow on the wall is the point. " +
+      "Work only with consenting adults; this style can feel invasive if the vibe isn’t mutual.",
+    album: {
+      folder: "raw-flash",
+      count: 10,
+      title: "Raw flash diary · 10 frames",
+      note: "Original TR-adjacent flash snapshots (not copyrighted Terry Richardson Diaries). Hard flash, white wall, high-key skin — style study only.",
+    },
+  },
+];
+
+// ─── Shot Deck UI ────────────────────────────────────────
+const deckScroll = document.getElementById("deck-scroll");
+const bodyEl = document.body;
+
+function albumPaths(folder, count) {
+  return Array.from({ length: count }, (_, i) =>
+    `shots/albums/${folder}/${String(i + 1).padStart(2, "0")}.jpg`
+  );
+}
+
+function albumMarkup(album) {
+  if (!album) return "";
+  const paths = albumPaths(album.folder, album.count);
+  const thumbs = paths
+    .map(
+      (src, i) => `
+      <button type="button" class="album-thumb" data-album="${album.folder}" data-index="${i}" aria-label="Open photo ${i + 1}">
+        <img src="${src}" alt="" loading="lazy" />
+      </button>`
+    )
+    .join("");
+  return `
+    <div class="album-block">
+      <div class="album-head">
+        <h4>${album.title}</h4>
+        <span>${album.count} photos</span>
+      </div>
+      <p class="album-note">${album.note}</p>
+      <div class="album-grid">${thumbs}</div>
+    </div>`;
+}
+
+function renderShots() {
+  deckScroll.innerHTML = SHOTS.map((s, i) => `
+    <article class="shot-card${i === 0 ? " active" : ""}" data-id="${s.id}" tabindex="0">
+      <div class="shot-thumb">
+        <img src="${s.img}" alt="${s.title}" loading="lazy" />
+        <span class="shot-tag">${s.tag}${s.album ? " · Album" : ""}</span>
+      </div>
+      <div class="shot-body">
+        <h3>${s.title}</h3>
+        <p class="why">${s.blurb}</p>
+        <div class="settings-row">
+          <div class="setting">
+            <span class="label">Aperture</span>
+            <span class="val accent">${s.f}</span>
+          </div>
+          <div class="setting">
+            <span class="label">ISO</span>
+            <span class="val">${s.iso}</span>
+          </div>
+          <div class="setting">
+            <span class="label">Shutter</span>
+            <span class="val">${s.ss}</span>
+          </div>
+        </div>
+        <p class="shot-explain">${s.explain}</p>
+        <div class="mode-pill">${s.modes.map((m) => `<span>${m}</span>`).join("")}</div>
+        ${albumMarkup(s.album)}
+      </div>
+    </article>
+  `).join("");
+
+  deckScroll.querySelectorAll(".shot-card").forEach((card) => {
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".album-thumb")) return;
+      selectShot(card.dataset.id);
+    });
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        selectShot(card.dataset.id);
+      }
+    });
+  });
+
+  deckScroll.querySelectorAll(".album-thumb").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openLightbox(btn.dataset.album, Number(btn.dataset.index));
+    });
+  });
+}
+
+function selectShot(id) {
+  deckScroll.querySelectorAll(".shot-card").forEach((c) => {
+    c.classList.toggle("active", c.dataset.id === id);
+  });
+  const card = deckScroll.querySelector(`[data-id="${id}"]`);
+  if (card) card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// ─── Lightbox ────────────────────────────────────────────
+const lb = document.getElementById("lightbox");
+const lbImg = document.getElementById("lb-img");
+const lbMeta = document.getElementById("lb-meta");
+let lbAlbum = null;
+let lbIndex = 0;
+let lbPaths = [];
+
+function openLightbox(folder, index) {
+  const shot = SHOTS.find((s) => s.album && s.album.folder === folder);
+  if (!shot) return;
+  lbAlbum = shot.album;
+  lbPaths = albumPaths(folder, shot.album.count);
+  lbIndex = index;
+  showLightboxFrame();
+  lb.classList.add("open");
+  lb.setAttribute("aria-hidden", "false");
+}
+
+function showLightboxFrame() {
+  if (!lbPaths.length) return;
+  lbImg.src = lbPaths[lbIndex];
+  lbMeta.innerHTML = `<strong>${lbAlbum.title}</strong> · ${lbIndex + 1} / ${lbPaths.length}`;
+}
+
+function closeLightbox() {
+  lb.classList.remove("open");
+  lb.setAttribute("aria-hidden", "true");
+  lbImg.removeAttribute("src");
+}
+
+function lbStep(dir) {
+  if (!lbPaths.length) return;
+  lbIndex = (lbIndex + dir + lbPaths.length) % lbPaths.length;
+  showLightboxFrame();
+}
+
+document.getElementById("lb-close")?.addEventListener("click", closeLightbox);
+document.getElementById("lb-prev")?.addEventListener("click", () => lbStep(-1));
+document.getElementById("lb-next")?.addEventListener("click", () => lbStep(1));
+lb?.addEventListener("click", (e) => {
+  if (e.target === lb) closeLightbox();
+});
+document.addEventListener("keydown", (e) => {
+  if (!lb?.classList.contains("open")) return;
+  if (e.key === "Escape") closeLightbox();
+  if (e.key === "ArrowLeft") lbStep(-1);
+  if (e.key === "ArrowRight") lbStep(1);
+});
+
+function openDeck() {
+  bodyEl.classList.add("deck-open");
+  document.getElementById("shot-deck").setAttribute("aria-hidden", "false");
+}
+
+function closeDeck() {
+  bodyEl.classList.remove("deck-open");
+  document.getElementById("shot-deck").setAttribute("aria-hidden", "true");
+}
+
+document.getElementById("open-deck").addEventListener("click", openDeck);
+document.getElementById("open-deck-2").addEventListener("click", openDeck);
+document.getElementById("close-deck").addEventListener("click", closeDeck);
+document.getElementById("deck-backdrop").addEventListener("click", closeDeck);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeDeck();
+});
+
+renderShots();
+
+// ═══════════════════════════════════════════════════════════
+// THREE.JS — EOS M5 + EF-M 22mm f/2 STM pancake
+// ═══════════════════════════════════════════════════════════
+const wrap = document.getElementById("canvas-wrap");
+const loaderEl = document.getElementById("loader");
+const progressEl = document.getElementById("load-progress");
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a0b);
+scene.fog = new THREE.FogExp2(0x0a0a0b, 0.045);
+
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(3.2, 1.4, 4.2);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+wrap.appendChild(renderer.domElement);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 2.0;
+controls.maxDistance = 9;
+controls.maxPolarAngle = Math.PI * 0.48;
+controls.target.set(0, 0.15, 0);
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.55;
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.28, 0.4, 0.85);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+// Lights
+const key = new THREE.DirectionalLight(0xfff5ee, 3.2);
+key.position.set(4, 6, 3);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.near = 0.5;
+key.shadow.camera.far = 20;
+key.shadow.camera.left = -4;
+key.shadow.camera.right = 4;
+key.shadow.camera.top = 4;
+key.shadow.camera.bottom = -4;
+key.shadow.bias = -0.0003;
+scene.add(key);
+
+const fill = new THREE.DirectionalLight(0xb8c4ff, 0.9);
+fill.position.set(-4, 2, -2);
+scene.add(fill);
+
+const rim = new THREE.DirectionalLight(0xff3355, 1.4);
+rim.position.set(-2, 1.5, -4);
+scene.add(rim);
+
+scene.add(new THREE.HemisphereLight(0x8899aa, 0x111114, 0.55));
+
+const redPoint = new THREE.PointLight(0xc8102e, 2.5, 8, 2);
+redPoint.position.set(1.5, 0.8, 2);
+scene.add(redPoint);
+
+// Materials
+const finishes = {
+  black: { body: 0x1c1c1e, metal: 0x3a3a40 },
+  silver: { body: 0xc8c8ce, metal: 0x8a8a92 },
+};
+
+const matBody = new THREE.MeshPhysicalMaterial({
+  color: finishes.black.body, roughness: 0.42, metalness: 0.25, clearcoat: 0.35, clearcoatRoughness: 0.35,
+});
+const matGrip = new THREE.MeshPhysicalMaterial({ color: 0x121214, roughness: 0.92, metalness: 0.05 });
+const matMetal = new THREE.MeshPhysicalMaterial({ color: finishes.black.metal, roughness: 0.28, metalness: 0.85 });
+const matChrome = new THREE.MeshPhysicalMaterial({ color: 0xd0d0d8, roughness: 0.12, metalness: 1.0 });
+const matBlackGloss = new THREE.MeshPhysicalMaterial({
+  color: 0x0a0a0c, roughness: 0.18, metalness: 0.4, clearcoat: 0.8, clearcoatRoughness: 0.15,
+});
+const matLensGlass = new THREE.MeshPhysicalMaterial({
+  color: 0x1a2233, roughness: 0.05, metalness: 0.2, transmission: 0.15, thickness: 0.4,
+  ior: 1.5, transparent: true, opacity: 0.92, envMapIntensity: 1.5,
+});
+const matScreen = new THREE.MeshPhysicalMaterial({
+  color: 0x0b1220, roughness: 0.15, metalness: 0.3, emissive: 0x0a1a35, emissiveIntensity: 0.35,
+});
+const matEVF = new THREE.MeshPhysicalMaterial({ color: 0x050508, roughness: 0.25, metalness: 0.2 });
+const matRed = new THREE.MeshStandardMaterial({
+  color: 0xc8102e, roughness: 0.35, metalness: 0.2, emissive: 0xc8102e, emissiveIntensity: 0.25,
+});
+const matDial = new THREE.MeshPhysicalMaterial({ color: 0x1a1a1c, roughness: 0.55, metalness: 0.4 });
+const matGoldRing = new THREE.MeshPhysicalMaterial({ color: 0xb8860b, roughness: 0.3, metalness: 0.9 });
+const matLensSilver = new THREE.MeshPhysicalMaterial({
+  color: 0xc4c4cc, roughness: 0.22, metalness: 0.75, clearcoat: 0.4, clearcoatRoughness: 0.3,
+});
+
+function box(w, h, d, mat, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  return m;
+}
+
+function cyl(rTop, rBot, h, mat, x = 0, y = 0, z = 0, segs = 48) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, segs), mat);
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  return m;
+}
+
+// ─── Camera body ─────────────────────────────────────────
+const cameraGroup = new THREE.Group();
+scene.add(cameraGroup);
+
+const BODY_W = 2.15;
+const BODY_H = 0.95;
+const BODY_D = 1.05;
+
+cameraGroup.add(box(BODY_W, BODY_H, BODY_D, matBody));
+cameraGroup.add(box(BODY_W * 0.98, 0.03, BODY_D * 0.98, matBody, 0, BODY_H / 2, 0));
+
+// Grip
+cameraGroup.add(box(0.48, 0.88, 0.72, matGrip, BODY_W / 2 - 0.18, -0.02, 0.22));
+for (let i = 0; i < 5; i++) {
+  cameraGroup.add(box(0.42, 0.02, 0.02, matBlackGloss, BODY_W / 2 - 0.18, -0.28 + i * 0.1, 0.55));
+}
+
+// Top plate
+cameraGroup.add(box(BODY_W * 0.98, 0.12, BODY_D * 0.92, matMetal, 0, BODY_H / 2 + 0.04, 0));
+cameraGroup.add(box(0.32, 0.04, 0.28, matChrome, 0, BODY_H / 2 + 0.12, -0.05));
+cameraGroup.add(box(0.28, 0.03, 0.22, matBlackGloss, 0, BODY_H / 2 + 0.15, -0.05));
+
+// Mode dial
+cameraGroup.add(cyl(0.16, 0.16, 0.1, matDial, -0.72, BODY_H / 2 + 0.14, -0.15, 32));
+cameraGroup.add(cyl(0.12, 0.12, 0.02, matMetal, -0.72, BODY_H / 2 + 0.2, -0.15, 32));
+cameraGroup.add(box(0.03, 0.015, 0.08, matRed, -0.72, BODY_H / 2 + 0.215, -0.08));
+
+// Main dial + shutter
+cameraGroup.add(cyl(0.14, 0.14, 0.08, matDial, 0.55, BODY_H / 2 + 0.13, -0.12, 32));
+cameraGroup.add(cyl(0.08, 0.08, 0.05, matChrome, 0.78, BODY_H / 2 + 0.12, 0.12, 24));
+cameraGroup.add(cyl(0.04, 0.04, 0.01, matRed, 0.78, BODY_H / 2 + 0.145, 0.12, 16));
+cameraGroup.add(box(0.08, 0.03, 0.08, matBlackGloss, 0.35, BODY_H / 2 + 0.11, 0.22));
+cameraGroup.add(box(0.08, 0.03, 0.08, matRed, 0.48, BODY_H / 2 + 0.11, 0.22));
+
+// EVF
+cameraGroup.add(box(0.72, 0.38, 0.55, matBody, 0, BODY_H / 2 + 0.28, -0.22));
+const eyepiece = cyl(0.16, 0.18, 0.12, matEVF, 0, BODY_H / 2 + 0.28, -0.52, 32);
+eyepiece.rotation.x = Math.PI / 2;
+cameraGroup.add(eyepiece);
+const eyeGlass = cyl(0.12, 0.12, 0.02, matLensGlass, 0, BODY_H / 2 + 0.28, -0.58, 32);
+eyeGlass.rotation.x = Math.PI / 2;
+cameraGroup.add(eyeGlass);
+const eyecup = cyl(0.19, 0.17, 0.06, matGrip, 0, BODY_H / 2 + 0.28, -0.48, 32);
+eyecup.rotation.x = Math.PI / 2;
+cameraGroup.add(eyecup);
+cameraGroup.add(box(0.55, 0.025, 0.04, matRed, 0, BODY_H / 2 + 0.48, -0.05));
+
+// ─── EF-M 22mm f/2 STM PANCAKE LENS ───────────────────────
+// Real lens is ~23.7mm deep — extremely short barrel
+const lensGroup = new THREE.Group();
+lensGroup.position.set(0, 0.02, BODY_D / 2);
+cameraGroup.add(lensGroup);
+
+// Mount flange on body
+const mountOuter = cyl(0.48, 0.48, 0.06, matMetal, 0, 0, 0.04, 64);
+mountOuter.rotation.x = Math.PI / 2;
+lensGroup.add(mountOuter);
+
+const mountInner = cyl(0.38, 0.38, 0.04, matBlackGloss, 0, 0, 0.07, 64);
+mountInner.rotation.x = Math.PI / 2;
+lensGroup.add(mountInner);
+
+// Gold EF-M contacts ring
+const goldRing = cyl(0.36, 0.36, 0.015, matGoldRing, 0, 0, 0.09, 64);
+goldRing.rotation.x = Math.PI / 2;
+lensGroup.add(goldRing);
+
+// Pancake barrel — short silver/black cylinder (classic 22mm look)
+// Outer decorative silver barrel
+const pancakeBody = cyl(0.46, 0.47, 0.22, matLensSilver, 0, 0, 0.18, 64);
+pancakeBody.rotation.x = Math.PI / 2;
+lensGroup.add(pancakeBody);
+
+// Slight step / focus ring band
+const focusRing = cyl(0.475, 0.475, 0.08, matBlackGloss, 0, 0, 0.28, 64);
+focusRing.rotation.x = Math.PI / 2;
+lensGroup.add(focusRing);
+
+// Fine focus ridges
+for (let i = 0; i < 12; i++) {
+  const ridge = cyl(0.478, 0.478, 0.008, matGrip, 0, 0, 0.245 + i * 0.007, 48);
+  ridge.rotation.x = Math.PI / 2;
+  lensGroup.add(ridge);
+}
+
+// Front silver ring with "22mm 1:2" aesthetic
+const frontRing = cyl(0.45, 0.45, 0.04, matChrome, 0, 0, 0.34, 64);
+frontRing.rotation.x = Math.PI / 2;
+lensGroup.add(frontRing);
+
+// Black front bevel
+const frontBevel = cyl(0.40, 0.42, 0.03, matBlackGloss, 0, 0, 0.37, 64);
+frontBevel.rotation.x = Math.PI / 2;
+lensGroup.add(frontBevel);
+
+// Front element glass
+const frontGlass = cyl(0.34, 0.34, 0.035, matLensGlass, 0, 0, 0.39, 64);
+frontGlass.rotation.x = Math.PI / 2;
+lensGroup.add(frontGlass);
+
+// Multi-coat reflections
+const coat1 = new THREE.Mesh(
+  new THREE.CircleGeometry(0.3, 48),
+  new THREE.MeshPhysicalMaterial({
+    color: 0x3366cc, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.4, side: THREE.DoubleSide,
+  })
+);
+coat1.position.set(0, 0, 0.41);
+lensGroup.add(coat1);
+
+const coat2 = new THREE.Mesh(
+  new THREE.CircleGeometry(0.16, 32),
+  new THREE.MeshPhysicalMaterial({
+    color: 0xcc4455, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.28, side: THREE.DoubleSide,
+  })
+);
+coat2.position.set(0.05, 0.04, 0.415);
+lensGroup.add(coat2);
+
+// STM badge area (tiny red accent near barrel)
+lensGroup.add(box(0.12, 0.04, 0.01, matRed, 0.42, 0.12, 0.2));
+
+// AF lamp
+cameraGroup.add(box(0.08, 0.08, 0.04, matChrome, -0.55, 0.25, BODY_D / 2 + 0.01));
+
+// Front logo plate
+cameraGroup.add(box(0.5, 0.12, 0.02, matMetal, 0.55, 0.28, BODY_D / 2 + 0.01));
+
+// Rear LCD
+cameraGroup.add(box(1.15, 0.78, 0.06, matBlackGloss, -0.15, 0.02, -BODY_D / 2 - 0.02));
+cameraGroup.add(box(1.0, 0.65, 0.02, matScreen, -0.15, 0.02, -BODY_D / 2 - 0.05));
+const screenUI = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.92, 0.58),
+  new THREE.MeshBasicMaterial({ color: 0x0e1a2e })
+);
+screenUI.position.set(-0.15, 0.02, -BODY_D / 2 - 0.06);
+cameraGroup.add(screenUI);
+cameraGroup.add(box(0.25, 0.04, 0.005, matRed, -0.4, 0.22, -BODY_D / 2 - 0.065));
+
+// Rear controls
+const rearDial = cyl(0.14, 0.14, 0.05, matDial, 0.72, -0.05, -BODY_D / 2 - 0.02, 32);
+rearDial.rotation.x = Math.PI / 2;
+cameraGroup.add(rearDial);
+cameraGroup.add(box(0.45, 0.15, 0.2, matGrip, 0.7, 0.35, -BODY_D / 2 + 0.15));
+[
+  [0.72, 0.25], [0.72, 0.12], [0.55, 0.25], [0.55, 0.12], [0.72, -0.28], [0.55, -0.28],
+].forEach(([x, y]) => cameraGroup.add(box(0.1, 0.08, 0.03, matBlackGloss, x, y, -BODY_D / 2 - 0.01)));
+
+cameraGroup.add(box(0.04, 0.45, 0.35, matMetal, -BODY_W / 2 - 0.01, 0, 0.1));
+cameraGroup.add(box(0.7, 0.04, 0.55, matMetal, 0.35, -BODY_H / 2 - 0.02, 0.05));
+cameraGroup.add(cyl(0.04, 0.04, 0.12, matChrome, BODY_W / 2 - 0.05, 0.35, 0, 12));
+cameraGroup.add(cyl(0.04, 0.04, 0.12, matChrome, -BODY_W / 2 + 0.05, 0.35, 0, 12));
+
+// Labels
+function makeLabelTexture(text, opts = {}) {
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 128;
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0, 0, 512, 128);
+  ctx.fillStyle = opts.color || "#c8102e";
+  ctx.font = `bold ${opts.size || 64}px "Bebas Neue", Impact, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 256, 64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const canonLogo = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.55, 0.14),
+  new THREE.MeshBasicMaterial({ map: makeLabelTexture("Canon", { color: "#e8e8ec", size: 72 }), transparent: true })
+);
+canonLogo.position.set(0.55, 0.28, BODY_D / 2 + 0.025);
+cameraGroup.add(canonLogo);
+
+const eosLabel = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.4, 0.1),
+  new THREE.MeshBasicMaterial({ map: makeLabelTexture("EOS M5", { color: "#c8102e", size: 56 }), transparent: true })
+);
+eosLabel.position.set(-0.55, -0.28, BODY_D / 2 + 0.02);
+cameraGroup.add(eosLabel);
+
+// Lens ring text (around front)
+const lensLabel = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.55, 0.1),
+  new THREE.MeshBasicMaterial({
+    map: makeLabelTexture("EF-M 22mm 1:2", { color: "#1a1a1c", size: 48 }),
+    transparent: true,
+  })
+);
+lensLabel.position.set(0, -0.42, 0.22);
+lensLabel.rotation.x = -0.3;
+lensGroup.add(lensLabel);
+
+// Pedestal
+const pedestal = new THREE.Mesh(
+  new THREE.CylinderGeometry(1.6, 1.8, 0.06, 64),
+  new THREE.MeshPhysicalMaterial({ color: 0x121214, roughness: 0.35, metalness: 0.6, clearcoat: 0.5 })
+);
+pedestal.position.y = -0.72;
+pedestal.receiveShadow = true;
+scene.add(pedestal);
+
+const ringLight = new THREE.Mesh(
+  new THREE.TorusGeometry(1.55, 0.015, 16, 100),
+  new THREE.MeshStandardMaterial({ color: 0xc8102e, emissive: 0xc8102e, emissiveIntensity: 1.2, roughness: 0.4 })
+);
+ringLight.rotation.x = Math.PI / 2;
+ringLight.position.y = -0.68;
+scene.add(ringLight);
+
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(6, 64),
+  new THREE.MeshStandardMaterial({ color: 0x080809, roughness: 1, metalness: 0 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.75;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Particles
+const particleCount = 80;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(particleCount * 3);
+for (let i = 0; i < particleCount; i++) {
+  pPos[i * 3] = (Math.random() - 0.5) * 10;
+  pPos[i * 3 + 1] = Math.random() * 4 - 0.5;
+  pPos[i * 3 + 2] = (Math.random() - 0.5) * 10;
+}
+pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
+const particles = new THREE.Points(
+  pGeo,
+  new THREE.PointsMaterial({ color: 0xffffff, size: 0.015, transparent: true, opacity: 0.35, sizeAttenuation: true })
+);
+scene.add(particles);
+
+// Views
+const views = {
+  hero: { pos: new THREE.Vector3(3.2, 1.4, 4.2), target: new THREE.Vector3(0, 0.15, 0) },
+  front: { pos: new THREE.Vector3(0.15, 0.35, 4.2), target: new THREE.Vector3(0, 0.08, 0.2) },
+  top: { pos: new THREE.Vector3(0.5, 4.2, 1.2), target: new THREE.Vector3(0, 0.2, 0) },
+  lens: { pos: new THREE.Vector3(0.8, 0.45, 2.4), target: new THREE.Vector3(0, 0.05, 0.7) },
+};
+
+function goToView(name) {
+  const v = views[name];
+  if (!v) return;
+  controls.autoRotate = false;
+  document.getElementById("auto-rotate-btn").textContent = "Auto Rotate";
+  const startPos = camera.position.clone();
+  const startTarget = controls.target.clone();
+  const t0 = performance.now();
+  const dur = 900;
+  function step(now) {
+    const t = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - t, 3);
+    camera.position.lerpVectors(startPos, v.pos, e);
+    controls.target.lerpVectors(startTarget, v.target, e);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+document.querySelectorAll(".view-toggles button").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".view-toggles button").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    goToView(btn.dataset.view);
+  });
+});
+
+function applyFinish(name) {
+  const f = finishes[name];
+  matBody.color.setHex(f.body);
+  matMetal.color.setHex(f.metal);
+  document.querySelectorAll(".swatch").forEach((s) => {
+    s.classList.toggle("active", s.dataset.finish === name);
+  });
+}
+
+document.querySelectorAll(".swatch").forEach((s) => {
+  s.addEventListener("click", () => applyFinish(s.dataset.finish));
+});
+
+document.getElementById("auto-rotate-btn").addEventListener("click", (e) => {
+  controls.autoRotate = !controls.autoRotate;
+  e.target.textContent = controls.autoRotate ? "Stop Rotate" : "Auto Rotate";
+});
+
+function onResize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+  bloom.setSize(w, h);
+}
+window.addEventListener("resize", onResize);
+
+let loadP = 0;
+function simulateLoad() {
+  loadP = Math.min(100, loadP + Math.random() * 18 + 8);
+  progressEl.style.width = loadP + "%";
+  if (loadP < 100) setTimeout(simulateLoad, 80);
+  else setTimeout(() => loaderEl.classList.add("hide"), 200);
+}
+simulateLoad();
+
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  cameraGroup.position.y = Math.sin(t * 0.7) * 0.03;
+  cameraGroup.rotation.z = Math.sin(t * 0.4) * 0.01;
+  particles.rotation.y = t * 0.02;
+  const arr = particles.geometry.attributes.position.array;
+  for (let i = 0; i < particleCount; i++) arr[i * 3 + 1] += Math.sin(t + i) * 0.0003;
+  particles.geometry.attributes.position.needsUpdate = true;
+  matScreen.emissiveIntensity = 0.3 + Math.sin(t * 1.5) * 0.08;
+  redPoint.intensity = 2.2 + Math.sin(t * 1.2) * 0.4;
+  controls.update();
+  composer.render();
+}
+animate();
