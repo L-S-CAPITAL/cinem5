@@ -1,19 +1,26 @@
 /**
  * Asset CDN / base URL for albums & covers.
- * Empty = same-origin (local dev).
- * Production can use GitHub raw or a CDN.
+ * Empty = same-origin (local, GitHub Pages, Vercel full deploys).
+ * Set ASSET_BASE if albums are hosted elsewhere.
  */
 export const ASSET_BASE = "";
 
-/** Optional production base (set on deploy if needed) */
+/** Fallback if a slim deploy omits album binaries */
 export const PROD_ASSET_BASE =
   "https://raw.githubusercontent.com/L-S-CAPITAL/cinem5/main";
 
 export function assetUrl(path) {
-  const base = ASSET_BASE || (typeof location !== "undefined" && location.hostname.includes("vercel.app")
-    ? PROD_ASSET_BASE
-    : "");
-  if (!base) return path;
   const p = path.replace(/^\.\//, "");
-  return `${base.replace(/\/$/, "")}/${p}`;
+  if (ASSET_BASE) {
+    return `${ASSET_BASE.replace(/\/$/, "")}/${p}`;
+  }
+  // Slim Vercel deploys without album JPGs: fall back to GitHub raw
+  if (
+    typeof location !== "undefined" &&
+    location.hostname.includes("vercel.app") &&
+    p.startsWith("shots/albums/")
+  ) {
+    return `${PROD_ASSET_BASE}/${p}`;
+  }
+  return path;
 }
