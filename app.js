@@ -7,6 +7,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { SHOTS, BUNDLES } from "./content/catalog.js";
 import { assetUrl } from "./content/assets.js";
+import { copySettingsText, frameRolesFor } from "./content/pack-os.js";
 import {
   applyUnlockQuery,
   checkoutUrl,
@@ -66,6 +67,51 @@ async function resolveAlbumUri(entry) {
   throw new Error(`Missing album frame ${key}`);
 }
 
+function lightDiagramSvg(kind) {
+  const diagrams = {
+    window: `<svg viewBox="0 0 120 64" class="light-svg" aria-hidden="true"><rect x="2" y="8" width="28" height="48" rx="2" fill="#1e3a5f" stroke="#7dd3fc"/><text x="16" y="36" fill="#7dd3fc" font-size="8" text-anchor="middle">WIN</text><circle cx="70" cy="32" r="10" fill="#fca5a5"/><text x="70" y="52" fill="#a1a1aa" font-size="7" text-anchor="middle">you</text><path d="M32 20 L58 28" stroke="#fde68a" stroke-width="2"/><path d="M32 32 L58 32" stroke="#fde68a" stroke-width="2"/><path d="M32 44 L58 36" stroke="#fde68a" stroke-width="2"/></svg>`,
+    flash: `<svg viewBox="0 0 120 64" class="light-svg" aria-hidden="true"><rect x="88" y="4" width="28" height="56" rx="2" fill="#27272a" stroke="#a1a1aa"/><text x="102" y="36" fill="#a1a1aa" font-size="7" text-anchor="middle">WALL</text><circle cx="50" cy="34" r="10" fill="#fca5a5"/><rect x="28" y="22" width="14" height="10" rx="1" fill="#fde68a" stroke="#fbbf24"/><text x="35" y="18" fill="#fde68a" font-size="6" text-anchor="middle">FLASH</text><path d="M42 28 L88 20" stroke="#fef08a" stroke-width="1.5"/><path d="M42 30 L88 40" stroke="#fef08a" stroke-width="1.5" opacity=".6"/><ellipse cx="78" cy="42" rx="8" ry="12" fill="#000" opacity=".45"/></svg>`,
+    practical: `<svg viewBox="0 0 120 64" class="light-svg" aria-hidden="true"><circle cx="24" cy="18" r="8" fill="#fbbf24"/><text x="24" y="36" fill="#fbbf24" font-size="6" text-anchor="middle">LAMP</text><circle cx="72" cy="36" r="10" fill="#fca5a5"/><path d="M32 20 L60 32" stroke="#fde68a" stroke-width="2"/><rect x="88" y="40" width="18" height="12" rx="1" fill="#444" stroke="#a1a1aa"/><text x="97" y="58" fill="#a1a1aa" font-size="6" text-anchor="middle">prop</text></svg>`,
+  };
+  return diagrams[kind] || diagrams.window;
+}
+
+function osPanelMarkup(shot, unlocked) {
+  const showFull = unlocked || shot.access === "free";
+  const avoid = (shot.avoid || []).map((a) => `<li>${a}</li>`).join("");
+  const plan = (shot.shootPlan || []).map((a) => `<li>${a}</li>`).join("");
+  return `
+    <div class="os-panel">
+      <div class="os-label">Look OS · production system</div>
+      <div class="os-grid">
+        <div class="os-block">
+          <h5>Light</h5>
+          ${lightDiagramSvg(shot.lightDiagram || "window")}
+        </div>
+        <div class="os-block">
+          <h5>Phone path</h5>
+          <p>${showFull ? shot.phonePath || "—" : "<em>Unlock for phone recipe</em>"}</p>
+        </div>
+      </div>
+      <div class="os-block">
+        <h5>15-minute shoot plan</h5>
+        <ol class="os-list">${showFull ? plan : "<li><em>Unlock for full plan</em></li>"}</ol>
+      </div>
+      <div class="os-block">
+        <h5>Content batch</h5>
+        <p class="batch-line">${showFull ? shot.contentBatch || "—" : "<em>Unlock for batch math</em>"}</p>
+      </div>
+      <div class="os-block">
+        <h5>Avoid</h5>
+        <ul class="os-list avoid">${showFull ? avoid : "<li><em>Unlock for failure modes</em></li>"}</ul>
+      </div>
+      <div class="os-actions">
+        <button type="button" class="copy-settings-btn" data-shot="${shot.id}">Copy settings</button>
+        <a class="cheat-link" href="packs/pdfs/${shot.packSku}.html" target="_blank" rel="noopener">Cheat sheet</a>
+      </div>
+    </div>`;
+}
+
 function albumMarkup(shot, unlocked) {
   const album = shot.album;
   if (!album) {
@@ -73,15 +119,17 @@ function albumMarkup(shot, unlocked) {
       return `
         <div class="album-block album-coming">
           <div class="album-head"><h4>Album packing</h4><span>Soon</span></div>
-          <p class="album-note">10-frame album + PDF cheat sheet shipping for this pack. Unlock now to get settings forever and album on release.</p>
+          <p class="album-note">10 money frames + look OS shipping for this pack.</p>
         </div>`;
     }
     return "";
   }
 
+  const roles = frameRolesFor(shot);
+
   if (!unlocked) {
-    // Preview first frame only, rest locked
     const first = albumPaths(album.folder, 1)[0];
+    const r0 = roles[0] || { role: "Hero", use: "Cover" };
     return `
       <div class="album-block album-locked">
         <div class="album-head">
@@ -90,23 +138,29 @@ function albumMarkup(shot, unlocked) {
         </div>
         <p class="album-note">${album.note}</p>
         <div class="album-grid locked-grid">
-          <button type="button" class="album-thumb preview" data-album="${album.folder}" data-index="0" aria-label="Preview frame 1">
+          <button type="button" class="album-thumb preview" data-album="${album.folder}" data-index="0" aria-label="Preview ${r0.role}">
             <img data-jpg="${first.jpg}" data-b64="${first.b64}" alt="" loading="lazy" />
+            <span class="frame-role">${r0.role}</span>
           </button>
-          ${Array.from({ length: Math.min(9, album.count - 1) }, () => `<div class="album-lock-tile" aria-hidden="true">🔒</div>`).join("")}
+          ${roles
+            .slice(1, 10)
+            .map((r) => `<div class="album-lock-tile" title="${r.use}"><span>${r.role}</span></div>`)
+            .join("")}
         </div>
-        <a class="unlock-btn" href="${checkoutUrl(shot.packSku)}" data-sku="${shot.packSku}">Unlock pack · ${formatPrice(shot.price)}</a>
+        <a class="unlock-btn" href="${checkoutUrl(shot.packSku)}" data-sku="${shot.packSku}">Unlock look OS · ${formatPrice(shot.price)}</a>
       </div>`;
   }
 
   const paths = albumPaths(album.folder, album.count);
   const thumbs = paths
-    .map(
-      (entry, i) => `
-      <button type="button" class="album-thumb" data-album="${album.folder}" data-index="${i}" aria-label="Open photo ${i + 1}">
+    .map((entry, i) => {
+      const r = roles[i] || { role: `#${i + 1}`, use: "" };
+      return `
+      <button type="button" class="album-thumb" data-album="${album.folder}" data-index="${i}" title="${r.use}" aria-label="${r.role}: ${r.use}">
         <img data-jpg="${entry.jpg}" data-b64="${entry.b64}" alt="" loading="lazy" />
-      </button>`
-    )
+        <span class="frame-role">${r.role}</span>
+      </button>`;
+    })
     .join("");
   return `
     <div class="album-block">
@@ -114,14 +168,14 @@ function albumMarkup(shot, unlocked) {
         <h4>${album.title}</h4>
         <span class="owned-pill">Owned</span>
       </div>
-      <p class="album-note">${album.note}</p>
+      <p class="album-note">${album.note} · Each frame is a production role.</p>
       <div class="album-grid">${thumbs}</div>
     </div>`;
 }
 
 function packBarMarkup(shot, unlocked) {
   if (shot.access === "free") {
-    return `<div class="pack-bar free"><span class="price-pill free">Free look</span></div>`;
+    return `<div class="pack-bar free"><span class="price-pill free">Free look OS</span></div>`;
   }
   if (unlocked) {
     return `<div class="pack-bar owned"><span class="owned-pill">Unlocked</span><span class="sku">${shot.packSku}</span></div>`;
@@ -182,6 +236,7 @@ function renderShots() {
         </div>
         <p class="shot-explain">${s.explain}</p>
         <div class="mode-pill">${s.modes.map((m) => `<span>${m}</span>`).join("")}</div>
+        ${osPanelMarkup(s, unlocked)}
         ${s.nsfw && !ageOk ? `<p class="album-note age-hint">Confirm 18+ to preview intimate albums.</p>` : albumMarkup(s, unlocked)}
       </div>
     </article>`;
@@ -190,8 +245,8 @@ function renderShots() {
   // Bundle strip at top of deck scroll (inject before first card)
   const bundleHtml = `
     <div class="bundle-strip">
-      <h3 class="bundle-title">Packs &amp; bundles</h3>
-      <p class="bundle-sub">Every look is a pack. Unlock one, or grab a bundle for creators who shoot often.</p>
+      <h3 class="bundle-title">Look OS packs</h3>
+      <p class="bundle-sub">Not tip PDFs — named looks with light, phone path, 15-min plan, and money frames. Built for creators who post for a living.</p>
       <div class="bundle-row">
         ${BUNDLES.map(
           (b) => `
@@ -207,13 +262,31 @@ function renderShots() {
 
   deckScroll.querySelectorAll(".shot-card").forEach((card) => {
     card.addEventListener("click", (e) => {
-      if (e.target.closest(".album-thumb, .unlock-btn, a")) return;
+      if (e.target.closest(".album-thumb, .unlock-btn, a, button")) return;
       selectShot(card.dataset.id);
     });
     card.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         selectShot(card.dataset.id);
+      }
+    });
+  });
+
+  deckScroll.querySelectorAll(".copy-settings-btn").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const shot = SHOTS.find((s) => s.id === btn.dataset.shot);
+      if (!shot) return;
+      const text = copySettingsText(shot);
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = "Copied ✓";
+        setTimeout(() => {
+          btn.textContent = "Copy settings";
+        }, 1500);
+      } catch {
+        prompt("Copy settings:", text);
       }
     });
   });
@@ -289,7 +362,11 @@ async function openLightbox(folder, index) {
 async function showLightboxFrame() {
   if (!lbEntries.length) return;
   lbImg.src = await resolveAlbumUri(lbEntries[lbIndex]);
-  lbMeta.innerHTML = `<strong>${lbAlbum.title}</strong> · ${lbIndex + 1} / ${lbEntries.length}`;
+  const shot = SHOTS.find((s) => s.album && s.album.folder === lbAlbum.folder);
+  const roles = shot ? frameRolesFor(shot) : [];
+  const r = roles[lbIndex];
+  const roleBit = r ? ` · <span class="lb-role">${r.role}</span> — ${r.use}` : "";
+  lbMeta.innerHTML = `<strong>${lbAlbum.title}</strong> · ${lbIndex + 1} / ${lbEntries.length}${roleBit}`;
 }
 
 function closeLightbox() {
