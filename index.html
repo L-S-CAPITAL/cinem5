@@ -902,6 +902,7 @@
     import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
     import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
     import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+    import { SHOT_URIS } from "./shots/embeds.js";
 
     // ═══════════════════════════════════════════════════════════
     // SHOT DECK DATA — cinematic recipes for M5 + 22mm f/2
@@ -911,7 +912,7 @@
         id: "neon-rain",
         title: "Neon Rain Street",
         tag: "Night · Street",
-        img: "shots/5.jpg",
+        img: SHOT_URIS["5"],
         f: "f/2",
         iso: "3200",
         ss: "1/60",
@@ -927,7 +928,7 @@
         id: "golden-portrait",
         title: "Golden Hour Portrait",
         tag: "Portrait · Magic Hour",
-        img: "shots/1.jpg",
+        img: SHOT_URIS["1"],
         f: "f/2",
         iso: "200",
         ss: "1/500",
@@ -943,7 +944,7 @@
         id: "macro-dew",
         title: "Close Focus · Dew Macro",
         tag: "Macro · Detail",
-        img: "shots/4.jpg",
+        img: SHOT_URIS["4"],
         f: "f/5.6",
         iso: "400",
         ss: "1/200",
@@ -959,7 +960,7 @@
         id: "jazz-bar",
         title: "Tungsten Jazz Bar",
         tag: "Interior · Low Light",
-        img: "shots/2.jpg",
+        img: SHOT_URIS["2"],
         f: "f/2",
         iso: "2500",
         ss: "1/50",
@@ -975,7 +976,7 @@
         id: "action-freeze",
         title: "Urban Action Freeze",
         tag: "Action · Daylight",
-        img: "shots/6.jpg",
+        img: SHOT_URIS["6"],
         f: "f/4",
         iso: "400",
         ss: "1/1600",
@@ -991,7 +992,7 @@
         id: "blue-hour-land",
         title: "Blue Hour Landscape",
         tag: "Landscape · Deep Focus",
-        img: "shots/3.jpg",
+        img: SHOT_URIS["3"],
         f: "f/8",
         iso: "200",
         ss: "1/30",
