@@ -184,9 +184,33 @@ const deckScroll = document.getElementById("deck-scroll");
 const bodyEl = document.body;
 
 function albumPaths(folder, count) {
-  return Array.from({ length: count }, (_, i) =>
-    `shots/albums/${folder}/${String(i + 1).padStart(2, "0")}.jpg`
-  );
+  // Prefer local .jpg; fall back to .jpg.b64 (text-safe for git hosts without binary push)
+  return Array.from({ length: count }, (_, i) => {
+    const base = `shots/albums/${folder}/${String(i + 1).padStart(2, "0")}`;
+    return { jpg: `${base}.jpg`, b64: `${base}.jpg.b64` };
+  });
+}
+
+const albumUriCache = new Map();
+
+async function resolveAlbumUri(entry) {
+  const key = entry.jpg;
+  if (albumUriCache.has(key)) return albumUriCache.get(key);
+  // Try binary jpg first (local dev), then base64 sidecar (GitHub text push)
+  try {
+    const r = await fetch(entry.jpg, { method: "HEAD" });
+    if (r.ok) {
+      albumUriCache.set(key, entry.jpg);
+      return entry.jpg;
+    }
+  } catch (_) {}
+  const b64 = await fetch(entry.b64).then((r) => {
+    if (!r.ok) throw new Error(`Missing album frame ${entry.b64}`);
+    return r.text();
+  });
+  const uri = `data:image/jpeg;base64,${b64.trim()}`;
+  albumUriCache.set(key, uri);
+  return uri;
 }
 
 function albumMarkup(album) {
@@ -194,9 +218,9 @@ function albumMarkup(album) {
   const paths = albumPaths(album.folder, album.count);
   const thumbs = paths
     .map(
-      (src, i) => `
+      (entry, i) => `
       <button type="button" class="album-thumb" data-album="${album.folder}" data-index="${i}" aria-label="Open photo ${i + 1}">
-        <img src="${src}" alt="" loading="lazy" />
+        <img data-jpg="${entry.jpg}" data-b64="${entry.b64}" alt="" loading="lazy" />
       </button>`
     )
     .join("");
@@ -209,6 +233,22 @@ function albumMarkup(album) {
       <p class="album-note">${album.note}</p>
       <div class="album-grid">${thumbs}</div>
     </div>`;
+}
+
+async function hydrateAlbumThumbs(root = document) {
+  const imgs = root.querySelectorAll("img[data-b64]");
+  await Promise.all(
+    [...imgs].map(async (img) => {
+      if (img.dataset.hydrated) return;
+      try {
+        const uri = await resolveAlbumUri({ jpg: img.dataset.jpg, b64: img.dataset.b64 });
+        img.src = uri;
+        img.dataset.hydrated = "1";
+      } catch (err) {
+        console.warn(err);
+      }
+    })
+  );
 }
 
 function renderShots() {
@@ -261,6 +301,10 @@ function renderShots() {
       openLightbox(btn.dataset.album, Number(btn.dataset.index));
     });
   });
+
+  // Hydrate active card album thumbs
+  const active = deckScroll.querySelector(".shot-card.active");
+  if (active) hydrateAlbumThumbs(active);
 }
 
 function selectShot(id) {
@@ -268,7 +312,10 @@ function selectShot(id) {
     c.classList.toggle("active", c.dataset.id === id);
   });
   const card = deckScroll.querySelector(`[data-id="${id}"]`);
-  if (card) card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (card) {
+    card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    hydrateAlbumThumbs(card);
+  }
 }
 
 // ─── Lightbox ────────────────────────────────────────────
@@ -277,23 +324,23 @@ const lbImg = document.getElementById("lb-img");
 const lbMeta = document.getElementById("lb-meta");
 let lbAlbum = null;
 let lbIndex = 0;
-let lbPaths = [];
+let lbEntries = [];
 
-function openLightbox(folder, index) {
+async function openLightbox(folder, index) {
   const shot = SHOTS.find((s) => s.album && s.album.folder === folder);
   if (!shot) return;
   lbAlbum = shot.album;
-  lbPaths = albumPaths(folder, shot.album.count);
+  lbEntries = albumPaths(folder, shot.album.count);
   lbIndex = index;
-  showLightboxFrame();
+  await showLightboxFrame();
   lb.classList.add("open");
   lb.setAttribute("aria-hidden", "false");
 }
 
-function showLightboxFrame() {
-  if (!lbPaths.length) return;
-  lbImg.src = lbPaths[lbIndex];
-  lbMeta.innerHTML = `<strong>${lbAlbum.title}</strong> · ${lbIndex + 1} / ${lbPaths.length}`;
+async function showLightboxFrame() {
+  if (!lbEntries.length) return;
+  lbImg.src = await resolveAlbumUri(lbEntries[lbIndex]);
+  lbMeta.innerHTML = `<strong>${lbAlbum.title}</strong> · ${lbIndex + 1} / ${lbEntries.length}`;
 }
 
 function closeLightbox() {
@@ -303,8 +350,8 @@ function closeLightbox() {
 }
 
 function lbStep(dir) {
-  if (!lbPaths.length) return;
-  lbIndex = (lbIndex + dir + lbPaths.length) % lbPaths.length;
+  if (!lbEntries.length) return;
+  lbIndex = (lbIndex + dir + lbEntries.length) % lbEntries.length;
   showLightboxFrame();
 }
 
